@@ -1,11 +1,6 @@
 import { Event } from 'edc-ws'
 
-export default class UserMessageEvent extends Event<{ message: string; sender: string }> {
-    details: {
-        message: string
-        sender: string
-    }
-
+export default class UserMessageEvent extends Event<{ message: string; sender: string }, undefined> {
     static type = `user-message`
 
     constructor(sender: string, message: string) {

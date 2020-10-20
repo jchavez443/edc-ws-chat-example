@@ -2,7 +2,8 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import Edc, {
     ServerHandlers,
-    BasicAuth
+    BasicAuth,
+    Event
     // eslint-disable-next-line import/no-unresolved
 } from 'edc-ws'
 import WebSocket from 'ws'
@@ -14,6 +15,8 @@ const serverHandlers: ServerHandlers = {
     onEvent: async (cause, ws, reply, send) => {
         if (cause.type === MessageUserEvent.type) {
             const messageUser = <MessageUserEvent>cause
+            if (messageUser.details === undefined) return
+
             const { target, message } = messageUser.details
 
             const sender = getUsername(ws)

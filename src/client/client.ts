@@ -3,18 +3,21 @@
 import Edc, { TimeoutError, AckedErrorEvent, ClientHandlers } from 'edc-ws'
 import readline from 'readline'
 import prompt from 'prompt-sync'
-import { MessageUserEvent, UserMessageEvent, UnknownEventErrorEvent, UserNotFoundErrorEvent } from '../events'
+import { MessageUserEvent, UserMessageEvent, UnknownEventErrorEvent } from '../events'
 
 const input = prompt()
 
 const username = input('Username?  ')
 const password = input('Password?  ')
-console.log(`Connectiong to srever, ${username}`)
+console.log(`Connectiong to server, ${username}`)
 
 const clientHandlers: ClientHandlers = {
     onEvent: async (cause, reply) => {
         if (cause.type === UserMessageEvent.type) {
             const userMsg = <UserMessageEvent>cause
+
+            if (userMsg.details === undefined) return
+
             const { sender, message } = userMsg.details
 
             console.log(`${sender}: ${message}`)
