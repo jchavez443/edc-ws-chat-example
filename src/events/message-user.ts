@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { Event } from 'edc-ws'
 
 export default class MessageUserEvent extends Event<{ message: string; target: string }, undefined> {

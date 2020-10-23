@@ -1,62 +1,50 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable import/no-extraneous-dependencies */
 import Edc, {
-    ServerHandlers,
-    BasicAuth,
-    Event
+    BasicAuth
     // eslint-disable-next-line import/no-unresolved
 } from 'edc-ws'
 import WebSocket from 'ws'
-import { MessageUserEvent, UnknownEventErrorEvent, UserMessageEvent, UserNotFoundErrorEvent } from '../events'
+import { MessageUserEvent, UserMessageEvent, UserNotFoundErrorEvent } from '../events'
 
 const port = 8081
+const server = new Edc.Server(port)
 
-const serverHandlers: ServerHandlers = {
-    onEvent: async (cause, ws, reply, send) => {
-        if (cause.type === MessageUserEvent.type) {
-            const messageUser = <MessageUserEvent>cause
-            if (messageUser.details === undefined) return
+server.authenticate = (request) => {
+    const auth = new BasicAuth(request.headers.authorization || '')
+    auth.authenticated = auth.password === 'password'
 
-            const { target, message } = messageUser.details
-
-            const sender = getUsername(ws)
-            const targetConn = getConnection(target)
-
-            if (!sender || !targetConn) {
-                reply(new UserNotFoundErrorEvent(target, cause))
-                return
-            }
-
-            const userMsg = new UserMessageEvent(sender, message).inherit(cause)
-
-            send(targetConn, userMsg)
-        } else {
-            console.log(`Unknown event recieved: ${cause.type}`)
-            reply(new UnknownEventErrorEvent(cause))
-        }
-    },
-    onAck: async (cause, info, reply, send) => {},
-    onError: async (cause, info, reply, send) => {
-        console.log(cause.details.message)
-    },
-
-    authenticate: (request) => {
-        const auth = new BasicAuth(request.headers.authorization || '')
-        auth.authenticated = auth.password === 'password'
-
-        return auth
-    },
-
-    onConnect: async (connection, auth: BasicAuth, arg3, that) => {
-        add(auth.username, connection)
-        that.broadCast(new UserMessageEvent(auth.username, 'Hello!'))
-    },
-    onClose: async (event, connection) => {
-        remove(connection)
-    }
+    return auth
+}
+server.onClose = async (event, connection) => {
+    remove(connection)
+}
+server.onConnect = async (connection, auth: BasicAuth, arg3, that) => {
+    add(auth.username, connection)
+    that.broadCast(new UserMessageEvent(auth.username, 'Hello!'))
+}
+server.onError = async (cause, info, reply, send) => {
+    console.log(cause.details.message)
 }
 
-const server = new Edc.Server(port, serverHandlers)
+server.onEvent(MessageUserEvent.type, async (cause, conn, reply, send) => {
+    const messageUser = <MessageUserEvent>cause
+    if (messageUser.details === undefined) return
+
+    const { target, message } = messageUser.details
+
+    const sender = getUsername(conn)
+    const targetConn = getConnection(target)
+
+    if (!sender || !targetConn) {
+        reply(new UserNotFoundErrorEvent(target, cause))
+        return
+    }
+
+    const userMsg = new UserMessageEvent(sender, message).inherit(cause)
+
+    send(targetConn, userMsg)
+})
 
 /**
  * This is stands in place of the connection manager role
