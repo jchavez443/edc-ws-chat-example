@@ -1,9 +1,9 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable import/no-extraneous-dependencies */
-import Edc, { TimeoutError, AckedErrorEvent, ClientHandlers } from 'edc-ws'
+import Edc, { TimeoutError, AckedErrorEvent } from 'edc-ws'
 import readline from 'readline'
 import prompt from 'prompt-sync'
-import { MessageUserEvent, UserMessageEvent, UnknownEventErrorEvent } from '../events'
+import { MessageUserEvent, UserMessageEvent } from '../events'
 
 const input = prompt()
 
@@ -11,29 +11,21 @@ const username = input('Username?  ')
 const password = input('Password?  ')
 console.log(`Connectiong to server, ${username}`)
 
-const clientHandlers: ClientHandlers = {
-    onEvent: async (cause, reply) => {
-        if (cause.type === UserMessageEvent.type) {
-            const userMsg = <UserMessageEvent>cause
-
-            if (userMsg.details === undefined) return
-
-            const { sender, message } = userMsg.details
-
-            console.log(`${sender}: ${message}`)
-        } else {
-            console.log(`Unknown event recieved: ${cause.type}`)
-            reply(new UnknownEventErrorEvent(cause))
-        }
-    },
-    onError: async (cause, reply) => {
-        console.log(cause.details.message)
-    },
-    onAck: async (cause, reply) => {}
+const client = new Edc.Client('ws://localhost:8081', {
+    auth: `${username}:${password}`
+})
+client.onError = async (cause, reply) => {
+    console.log(cause.details.message)
 }
 
-const client = new Edc.Client('ws://localhost:8081', clientHandlers, {
-    auth: `${username}:${password}`
+client.onEvent(UserMessageEvent.type, async (cause, reply) => {
+    const userMsg = <UserMessageEvent>cause
+
+    if (userMsg.details === undefined) return
+
+    const { sender, message } = userMsg.details
+
+    console.log(`${sender}: ${message}`)
 })
 
 /**
